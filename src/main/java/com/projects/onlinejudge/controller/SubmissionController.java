@@ -1,4 +1,4 @@
-package com.projects.onlinejudge.Controller;
+package com.projects.onlinejudge.controller;
 
 import com.projects.onlinejudge.dto.RunRequest;
 import com.projects.onlinejudge.dto.RunResponse;
