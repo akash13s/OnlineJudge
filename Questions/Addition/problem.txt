@@ -1,0 +1,10 @@
+Given 2 numbers in the range of -100 to 100 add them and output the result
+
+=========
+Example 1
+=========
+Input
+2 2
+
+Output
+4
