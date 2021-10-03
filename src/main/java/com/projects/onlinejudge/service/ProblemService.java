@@ -11,4 +11,5 @@ public interface ProblemService {
     public Boolean deleteProblem(String problemCode);
     public Boolean addTestCase(String problemCode, int testCaseNumber, MultipartFile[] multipartFiles);
     public Boolean deleteTestCase(String problemCode, int testCaseNumber);
+    public Boolean deleteAllTestCases(String problemCode);
 }

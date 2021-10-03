@@ -8,5 +8,9 @@ public interface AwsS3Service {
 
     public boolean downloadFile(String key, String destinationFilePath);
 
+    public boolean downloadDirectory(String key, String destinationDirectoryPath);
+
     public boolean deleteFile(String key);
+
+    public boolean deleteDirectory(String key);
 }

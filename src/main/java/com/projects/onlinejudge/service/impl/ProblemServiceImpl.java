@@ -50,6 +50,12 @@ public class ProblemServiceImpl implements ProblemService {
         return amazonClient.deleteFile(inputFileKey) && amazonClient.deleteFile(outputFileKey);
     }
 
+    @Override
+    public Boolean deleteAllTestCases(String problemCode) {
+        return amazonClient.deleteDirectory(problemCode);
+    }
+
+
     private String getFileName(String problemCode, boolean isInputFile, int testCaseNumber) {
         return problemCode.concat(isInputFile? FileConstants.INPUT_FILE: FileConstants.OUTPUT_FILE) + testCaseNumber +
                 FileConstants.TEXT_FILE_EXT;

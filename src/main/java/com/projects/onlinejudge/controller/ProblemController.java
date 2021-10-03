@@ -30,4 +30,10 @@ public class ProblemController {
         boolean success = problemService.deleteTestCase(problemCode, testCaseNumber);
         return new ResponseEntity<String>(success? "Test case removed successfully": "Failed to remove test case", HttpStatus.OK);
     }
+
+    @DeleteMapping("/remove/testcases/{problemCode}")
+    public ResponseEntity<?> removeAllTestCases(@PathVariable("problemCode") String problemCode) {
+        boolean success = problemService.deleteAllTestCases(problemCode);
+        return new ResponseEntity<String>(success? "All test case removed successfully": "Failed to remove test cases", HttpStatus.OK);
+    }
 }
