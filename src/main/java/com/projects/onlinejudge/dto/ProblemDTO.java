@@ -1,72 +1,35 @@
 package com.projects.onlinejudge.dto;
 
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+import javax.validation.constraints.NotBlank;
+
+@Setter
+@Getter
 @NoArgsConstructor
 public class ProblemDTO {
 
-    private Long id;
+    @NotBlank(message = "problemCode cannot be blank")
     private String problemCode;
+
+    @NotBlank(message = "userName cannot be blank")
     private String userName;
+
+    @NotBlank(message = "title cannot be blank")
     private String title;
+
+    @NotBlank(message = "description cannot be blank")
     private String description;
+
+    @NotBlank(message = "inputFormat cannot be blank")
     private String inputFormat;
+
+    @NotBlank(message = "outputFormat cannot be blank")
     private String outputFormat;
+
+    @NotBlank(message = "constraints cannot be blank")
     private String constraints;
 
-    public String getProblemCode() {
-        return problemCode;
-    }
-
-    public void setProblemCode(String problemCode) {
-        this.problemCode = problemCode;
-    }
-
-    public String getUserName() {
-        return userName;
-    }
-
-    public void setUserName(String userName) {
-        this.userName = userName;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getInputFormat() {
-        return inputFormat;
-    }
-
-    public void setInputFormat(String inputFormat) {
-        this.inputFormat = inputFormat;
-    }
-
-    public String getOutputFormat() {
-        return outputFormat;
-    }
-
-    public void setOutputFormat(String outputFormat) {
-        this.outputFormat = outputFormat;
-    }
-
-    public String getConstraints() {
-        return constraints;
-    }
-
-    public void setConstraints(String constraints) {
-        this.constraints = constraints;
-    }
 }
