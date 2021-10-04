@@ -4,9 +4,7 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
+import com.amazonaws.services.s3.model.*;
 import com.amazonaws.services.s3.transfer.MultipleFileDownload;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
@@ -118,13 +116,25 @@ public class AmazonClient implements AwsS3Service {
     @Override
     public boolean deleteDirectory(String key) {
         try {
-            ObjectListing objectListing = s3client.listObjects(bucket, key);
-            objectListing.getObjectSummaries().forEach(objectSummary -> {
-                s3client.deleteObject(bucket,  objectSummary.getKey());
-            });
+            ListObjectsRequest listObjectsRequest = new ListObjectsRequest()
+                    .withBucketName(bucket)
+                    .withPrefix(key);
+
+            ObjectListing objectListing = s3client.listObjects(listObjectsRequest);
+
+            while (true) {
+                for (S3ObjectSummary objectSummary : objectListing.getObjectSummaries()) {
+                    s3client.deleteObject(bucket, objectSummary.getKey());
+                }
+                if (objectListing.isTruncated()) {
+                    objectListing = s3client.listNextBatchOfObjects(objectListing);
+                } else {
+                    break;
+                }
+            }
         }
         catch (Exception e) {
-            logger.error("Error = {} while deleting directory",e.getMessage());
+            logger.error("Error = {} while deleting directory", e.getMessage());
             return false;
         }
         return true;
