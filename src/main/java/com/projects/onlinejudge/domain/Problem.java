@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import javax.persistence.*;
+import java.util.Date;
 
 @Getter
 @Setter
@@ -30,4 +31,6 @@ public class Problem {
 
     private Long numberOfTestCases = 0L;
 
+    private Date createdAt;
+    private Date updatedAt;
 }
