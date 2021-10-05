@@ -6,7 +6,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import javax.persistence.*;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @Getter
 @Setter
@@ -30,7 +32,11 @@ public class Problem {
     private User user;
 
     private Long numberOfTestCases = 0L;
+    private Long nextTestCaseId = 1L;
 
     private Date createdAt;
     private Date updatedAt;
+
+    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "problem", orphanRemoval = true)
+    private List<SampleTestCase> sampleTestCases = new ArrayList<>();
 }

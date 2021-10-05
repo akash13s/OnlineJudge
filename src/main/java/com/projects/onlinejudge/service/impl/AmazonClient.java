@@ -8,7 +8,6 @@ import com.amazonaws.services.s3.model.*;
 import com.amazonaws.services.s3.transfer.MultipleFileDownload;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
-import com.projects.onlinejudge.constants.FileConstants;
 import com.projects.onlinejudge.service.AwsS3Service;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
@@ -56,7 +55,6 @@ public class AmazonClient implements AwsS3Service {
             File file = convertMultiPartToFile(multipartFile);
             s3client.putObject(bucket, key, file);
             file.delete();
-            downloadDirectory("PROB", FileConstants.LOCAL_PROBLEM_DIRECTORY);
         }
         catch (Exception e) {
             logger.error("Error = {} while uploading file", e.getMessage());

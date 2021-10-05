@@ -1,7 +1,7 @@
 package com.projects.onlinejudge.controller;
 
-import com.amazonaws.services.dynamodbv2.xspec.S;
 import com.projects.onlinejudge.dto.ProblemDTO;
+import com.projects.onlinejudge.dto.TestCaseDTO;
 import com.projects.onlinejudge.service.impl.ProblemServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -9,7 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.xml.ws.Response;
+import java.io.IOException;
+import java.util.Objects;
 
 
 @RestController
@@ -21,9 +22,13 @@ public class ProblemController {
 
     @PostMapping("/create")
     public ResponseEntity<?> createProblem(@RequestBody ProblemDTO problemDTO) {
-        boolean success = problemService.createProblem(problemDTO);
-        return getResponse(success, "Problem created successfully",
-                "Unable to create problem");
+        ProblemDTO problemDTO1 = problemService.createProblem(problemDTO);
+        if (Objects.nonNull(problemDTO1)) {
+            return new ResponseEntity<ProblemDTO>(problemDTO1, HttpStatus.OK);
+        }
+        else {
+            return new ResponseEntity<String>("Unable to create problem", HttpStatus.BAD_REQUEST);
+        }
     }
 
     @GetMapping("/{problemCode}")
@@ -34,8 +39,13 @@ public class ProblemController {
 
     @PutMapping("/update")
     public ResponseEntity<?> updateProblem(@RequestBody ProblemDTO problemDTO) {
-        boolean success = problemService.updateProblem(problemDTO);
-        return getResponse(success, "Problem updated successfully", "Unable to update problem");
+        ProblemDTO problemDTO1 = problemService.updateProblem(problemDTO);
+        if (Objects.nonNull(problemDTO1)) {
+            return new ResponseEntity<ProblemDTO>(problemDTO1, HttpStatus.OK);
+        }
+        else {
+            return new ResponseEntity<String>("Unable to update problem", HttpStatus.BAD_REQUEST);
+        }
     }
 
     @DeleteMapping("/remove/{problemCode}")
@@ -44,26 +54,26 @@ public class ProblemController {
         return getResponse(success, "Problem removed successfully", "Unable to remove problem");
     }
 
-    @PostMapping("/add/testcase/{problemCode}/{testCaseNumber}")
+    @PostMapping("/add/testcase/{problemCode}")
     public ResponseEntity<?> addProblemTestCase(@PathVariable("problemCode") String problemCode,
-                                                @PathVariable("testCaseNumber") Integer testCaseNumber,
-                                                @RequestParam("files") MultipartFile[] files) {
+                                                @RequestParam("inputFile") MultipartFile inputFile,
+                                                @RequestParam("outputFile") MultipartFile outputFile,
+                                                @RequestParam("isSampleTest") Boolean isSampleTest) throws IOException {
 
-        boolean success = problemService.addTestCase(problemCode, testCaseNumber, files);
-        return getResponse(success, "Test case added successfully", "Failed to add test case");
+        TestCaseDTO testCaseDTO = problemService.addTestCase(problemCode, inputFile, outputFile, isSampleTest);
+        if (Objects.nonNull(testCaseDTO)) {
+            return new ResponseEntity<TestCaseDTO>(testCaseDTO, HttpStatus.OK);
+        }
+        else {
+            return new ResponseEntity<String>("Unable to add test case", HttpStatus.BAD_REQUEST);
+        }
     }
 
-    @DeleteMapping("/remove/testcase/{problemCode}/{testCaseNumber}")
-    public ResponseEntity<?> removeTestCase(@PathVariable("problemCode") String problemCode,
-                                            @PathVariable("testCaseNumber") Integer testCaseNumber) {
-        boolean success = problemService.deleteTestCase(problemCode, testCaseNumber);
+    @DeleteMapping("/remove/testcase")
+    public ResponseEntity<?> removeTestCase(@RequestBody TestCaseDTO testCaseDTO) {
+        boolean success = problemService.deleteTestCase(testCaseDTO.getProblemCode(), (int) testCaseDTO.getId(),
+                testCaseDTO.getIsSampleTest());
         return getResponse(success, "Test case removed successfully", "Failed to remove test case");
-    }
-
-    @DeleteMapping("/remove/testcases/{problemCode}")
-    public ResponseEntity<?> removeAllTestCases(@PathVariable("problemCode") String problemCode) {
-        boolean success = problemService.deleteAllTestCases(problemCode);
-        return getResponse(success, "All test case removed successfully", "Failed to remove test cases");
     }
 
     private ResponseEntity<String> getResponse(boolean success, String successMessage, String failureMessage) {
@@ -74,4 +84,5 @@ public class ProblemController {
             return new ResponseEntity<>(failureMessage, HttpStatus.BAD_REQUEST);
         }
     }
+
 }
