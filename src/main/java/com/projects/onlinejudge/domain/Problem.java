@@ -38,5 +38,5 @@ public class Problem {
     private Date updatedAt;
 
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "problem", orphanRemoval = true)
-    private List<SampleTestCase> sampleTestCases = new ArrayList<>();
+    private List<TestCase> testCases = new ArrayList<>();
 }

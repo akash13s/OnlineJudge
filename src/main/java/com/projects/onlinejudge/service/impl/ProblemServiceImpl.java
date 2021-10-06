@@ -2,13 +2,13 @@ package com.projects.onlinejudge.service.impl;
 
 import com.projects.onlinejudge.constants.FileConstants;
 import com.projects.onlinejudge.domain.Problem;
-import com.projects.onlinejudge.domain.SampleTestCase;
+import com.projects.onlinejudge.domain.TestCase;
 import com.projects.onlinejudge.domain.User;
 import com.projects.onlinejudge.dto.ProblemDTO;
 import com.projects.onlinejudge.dto.SampleTestCaseDTO;
 import com.projects.onlinejudge.dto.TestCaseDTO;
 import com.projects.onlinejudge.repository.ProblemRepository;
-import com.projects.onlinejudge.repository.SampleTestCaseRepository;
+import com.projects.onlinejudge.repository.TestCaseRepository;
 import com.projects.onlinejudge.repository.UserRepository;
 import com.projects.onlinejudge.service.ProblemService;
 import org.modelmapper.ModelMapper;
@@ -17,9 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.sql.Struct;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.Objects;
 
@@ -36,7 +34,7 @@ public class ProblemServiceImpl implements ProblemService {
     private UserRepository userRepository;
 
     @Autowired
-    private SampleTestCaseRepository sampleTestCaseRepository;
+    private TestCaseRepository testCaseRepository;
 
     @Autowired
     private ModelMapper mapper;
@@ -99,34 +97,31 @@ public class ProblemServiceImpl implements ProblemService {
             return null;
         }
 
-        SampleTestCase sampleTestCase1 = null;
-
-        if (isSampleTest) {
-            SampleTestCase sampleTestCase = new SampleTestCase();
-            sampleTestCase.setId(problem.getNextTestCaseId());
+        TestCase testCase = new TestCase();
+        testCase.setId(problem.getNextTestCaseId());
+        testCase.setProblemCode(problemCode);
+        testCase.setInputFileName(inputFileKey);
+        testCase.setOutputFileName(outputFileKey);
+        testCase.setSampleTest(isSampleTest);
+        if (testCase.isSampleTest()) {
             // convert multipart file content to string
-            sampleTestCase.setSampleInput(new String(inputFile.getBytes()));
-            sampleTestCase.setSampleOutput(new String(outputFile.getBytes()));
-
-            sampleTestCase.setProblem(problem);
-            sampleTestCase.setProblemCode(problemCode);
-            sampleTestCase1 = sampleTestCaseRepository.save(sampleTestCase);
+            testCase.setSampleInput(new String(inputFile.getBytes()));
+            testCase.setSampleOutput(new String(outputFile.getBytes()));
         }
+
+        testCase.setProblem(problem);
+        TestCase testCase1 = testCaseRepository.save(testCase);
 
         problem.setNextTestCaseId(problem.getNextTestCaseId() + 1);
         problem.setNumberOfTestCases(problem.getNumberOfTestCases() + 1);
         problem.setUpdatedAt(Date.from(Instant.now()));
         problemRepository.save(problem);
+
         if (isSampleTest) {
-            SampleTestCaseDTO sampleTestCaseDTO1 =  mapper.map(sampleTestCase1, SampleTestCaseDTO.class);
-            sampleTestCaseDTO1.setIsSampleTest(true);
-            return  sampleTestCaseDTO1;
+            return mapper.map(testCase1, SampleTestCaseDTO.class);
         }
         else {
-            TestCaseDTO testCaseDTO = new TestCaseDTO();
-            testCaseDTO.setId(problem.getNextTestCaseId() - 1);
-            testCaseDTO.setProblemCode(problemCode);
-            return testCaseDTO;
+            return mapper.map(testCase1, TestCaseDTO.class);
         }
 
     }
@@ -137,14 +132,16 @@ public class ProblemServiceImpl implements ProblemService {
         Problem problem = validateProblemCode(problemCode);
         String inputFileKey = getFileName(problemCode, true, testCaseId, isSampleTest);
         String outputFileKey = getFileName(problemCode, false, testCaseId, isSampleTest);
+
+        // delete test cases from s3 and db
         boolean success =  amazonClient.deleteFile(inputFileKey) && amazonClient.deleteFile(outputFileKey);
         if (!success) {
             return false;
         }
-        if (isSampleTest) {
-            SampleTestCase sampleTestCase = sampleTestCaseRepository.findByProblemAndId(problem, (long) testCaseId);
-            sampleTestCaseRepository.delete(sampleTestCase);
-        }
+
+        TestCase testCase = testCaseRepository.findByProblemAndId(problem, (long) testCaseId);
+        testCaseRepository.delete(testCase);
+
         problem.setNumberOfTestCases(problem.getNumberOfTestCases() - 1);
         problem.setUpdatedAt(Date.from(Instant.now()));
         problemRepository.save(problem);
@@ -158,7 +155,7 @@ public class ProblemServiceImpl implements ProblemService {
         if (!success) {
             return false;
         }
-        sampleTestCaseRepository.deleteAll(problem.getSampleTestCases());
+        testCaseRepository.deleteAll(problem.getTestCases());
         return true;
     }
 

@@ -3,6 +3,7 @@ package com.projects.onlinejudge.dto;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.aspectj.weaver.ast.Test;
 
 import javax.validation.constraints.NotBlank;
 import java.util.List;
@@ -35,6 +36,6 @@ public class ProblemDTO {
     @NotBlank(message = "constraints cannot be blank")
     private String constraints;
 
-    private List<SampleTestCaseDTO> sampleTestCases;
+    private List<TestCaseDTO> testCases;
 
 }

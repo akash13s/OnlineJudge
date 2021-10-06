@@ -11,5 +11,5 @@ public class TestCaseDTO {
 
     private long id;
     private String problemCode;
-    private Boolean isSampleTest = false;
+    private boolean isSampleTest;
 }
