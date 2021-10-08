@@ -1,0 +1,28 @@
+server:
+  port: 8080
+
+# MySQL configuration
+spring:
+  jpa:
+    database-platform: org.hibernate.dialect.MySQL5InnoDBDialect
+    hibernate.ddl-auto: update
+  datasource:
+    url: jdbc:mysql://localhost:3306/online_judge
+    username: root
+    password:
+
+# Language config
+language-config:
+  languages:
+    - language: java
+      fileExtension: .java
+      compileCommand: cd {filePath} && javac {problemCode}.java
+      runCommand: cd {filePath} && java {problemCode} < {inputFileName} > {outputFileName}
+    - language: cpp
+      fileExtension: .cpp
+      compileCommand: cd {filePath} && g++ -std=c++11 {problemCode}.cpp -o {problemCode}.out
+      runCommand: cd {filePath} && ./{problemCode}.out < {inputFileName} > {outputFileName}
+    - language: python
+      fileExtension: .py
+      compileCommand:
+      runCommand: cd {filePath} && python3 {problemCode}.py < {inputFileName} > {outputFileName}
