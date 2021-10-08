@@ -16,13 +16,13 @@ language-config:
   languages:
     - language: java
       fileExtension: .java
-      compileCommand: cd {filePath} && javac {problemCode}.java
-      runCommand: cd {filePath} && java {problemCode} < {inputFileName} > {outputFileName}
+      compileCommand: cd ${sourceFileDirectory} && javac ${submissionId}.java
+      runCommand: cd ${sourceFileDirectory} && java ${submissionId} < ${inputFilePath} > ${outputFilePath}
     - language: cpp
       fileExtension: .cpp
-      compileCommand: cd {filePath} && g++ -std=c++11 {problemCode}.cpp -o {problemCode}.out
-      runCommand: cd {filePath} && ./{problemCode}.out < {inputFileName} > {outputFileName}
+      compileCommand: cd ${sourceFileDirectory} && g++ -std=c++11 ${submissionId}.cpp -o ${problemCode}.out
+      runCommand: cd ${sourceFileDirectory} && ./${submissionId}.out < ${inputFilePath} > ${outputFilePath}
     - language: python
       fileExtension: .py
       compileCommand:
-      runCommand: cd {filePath} && python3 {problemCode}.py < {inputFileName} > {outputFileName}
+      runCommand: cd ${sourceFileDirectory} && python3 ${submissionId}.py < ${inputFilePath} > ${outputFilePath}
