@@ -17,12 +17,12 @@ language-config:
     - language: java
       fileExtension: .java
       compileCommand: cd ${sourceFileDirectory} && javac ${submissionId}.java
-      runCommand: cd ${sourceFileDirectory} && java ${submissionId} < ${inputFilePath} > ${outputFilePath}
+      runCommand: cd ${sourceFileDirectory} && java ${className} < ${inputFilePath} > ${outputFilePath}
     - language: cpp
       fileExtension: .cpp
-      compileCommand: cd ${sourceFileDirectory} && g++ -std=c++11 ${submissionId}.cpp -o ${problemCode}.out
+      compileCommand: cd ${sourceFileDirectory} && g++ -std=c++11 ${submissionId}.cpp -o ${submissionId}.out
       runCommand: cd ${sourceFileDirectory} && ./${submissionId}.out < ${inputFilePath} > ${outputFilePath}
-    - language: python
+    - language: python3
       fileExtension: .py
       compileCommand:
       runCommand: cd ${sourceFileDirectory} && python3 ${submissionId}.py < ${inputFilePath} > ${outputFilePath}

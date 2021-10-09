@@ -16,6 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Objects;
+
 @Service
 public class SubmissionServiceImpl implements SubmissionService {
 
@@ -65,6 +67,7 @@ public class SubmissionServiceImpl implements SubmissionService {
             We are calling runner directly here. Later on, we need to call kafka producer from here.
          */
         RunRequest runRequest = mapper.map(submission, RunRequest.class);
+        runRequest.setFileName(getFilename(Objects.requireNonNull(code.getOriginalFilename())));
         RunResponse runResponse = runner.runTests(runRequest);
         SubmissionResponseDTO responseDTO = new SubmissionResponseDTO();
         responseDTO.setId(submission.getId());
@@ -75,6 +78,23 @@ public class SubmissionServiceImpl implements SubmissionService {
         responseDTO.setTestCasesPassed(runResponse.getPassed());
         return responseDTO;
     }
+
+    private String getFilename(String originalFilename) {
+        if (originalFilename.contains(".")) {
+            int idx = originalFilename.indexOf('.');
+            return originalFilename.substring(0, idx);
+        }
+        else {
+            return originalFilename;
+        }
+    }
+
+    @Override
+    public Boolean downloadProblem(String problemCode) {
+        amazonClient.downloadDirectory(problemCode, runner.getProblemTestCasesDirectory());
+        return true;
+    }
+
 
     private String getSubmissionKey(String userName, Long id) {
         return userName + "/" + id + FileConstants.TEXT_FILE_EXT;

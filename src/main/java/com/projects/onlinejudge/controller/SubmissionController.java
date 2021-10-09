@@ -25,4 +25,10 @@ public class SubmissionController {
         SubmissionResponseDTO responseDTO = submissionService.submitCode(language, userName, problemCode, code);
         return new ResponseEntity<SubmissionResponseDTO>(responseDTO, HttpStatus.OK);
     }
+
+    @PostMapping("/download/{problemCode}")
+    public ResponseEntity<?> downloadProblem(@PathVariable("problemCode") String problemCode) {
+        boolean success = submissionService.downloadProblem(problemCode);
+        return new ResponseEntity<>(success? "problem successfully downloaded": "unable to download problem", HttpStatus.OK);
+    }
 }

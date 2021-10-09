@@ -17,4 +17,5 @@ public class RunRequest implements Serializable {
     String userName;
     String submissionId;
     String problemCode;
+    String fileName;
 }

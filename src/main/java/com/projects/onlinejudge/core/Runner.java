@@ -8,6 +8,7 @@ import com.projects.onlinejudge.dto.RunRequest;
 import com.projects.onlinejudge.dto.RunResponse;
 import com.projects.onlinejudge.repository.ProblemRepository;
 import com.projects.onlinejudge.service.impl.AmazonClient;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.text.StringSubstitutor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,8 +16,6 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
-import java.sql.Date;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,14 +25,20 @@ import java.util.concurrent.atomic.AtomicLong;
 @Service
 public class Runner extends RunnerUtils {
 
-    @Value("${user.submissions.directory}")
-    private String userSubmissionsDirectory;
+    //
+    @Value("${submissions.directory}")
+    private String submissionsDirectory;
 
+    // looks good
     @Value("${problem.testcases.directory}")
     private String problemTestCasesDirectory;
 
     @Value("${user.output.directory}")
     private String userOutputDirectory;
+
+    public String getProblemTestCasesDirectory() {
+        return problemTestCasesDirectory;
+    }
 
     @Autowired
     private LanguageConfig languageConfig;
@@ -56,27 +61,32 @@ public class Runner extends RunnerUtils {
 
             LanguageConfig.Language language = languageConfig.getLanguageMap().get(lang);
 
-            // download user submission
-            String submissionDestinationFilePath = userSubmissionsDirectory.concat(submissionId);
-            File tempFile = new File(submissionDestinationFilePath + FileConstants.TEXT_FILE_EXT);
+            /*
+                Download user submission.
+                User submission file path on local: {submissionsDirectory}/{submissionId}/{submissionId.(java/c++/py/....)}
+             */
+            String submissionDestinationFilePath = submissionsDirectory.concat(submissionId);
+            File submissionDir = new File(submissionDestinationFilePath);
+            if (!submissionDir.exists()) {
+                submissionDir.mkdirs();
+            }
+            File tempFile = new File(submissionDir.getAbsolutePath() + "/" + submissionId + FileConstants.TEXT_FILE_EXT);
             tempFile.createNewFile();
-            amazonClient.downloadFile(attribute.getAwsSubmissionKey(), submissionDestinationFilePath +
-                    FileConstants.TEXT_FILE_EXT);
+            amazonClient.downloadFile(attribute.getAwsSubmissionKey(), tempFile.getAbsolutePath());
 
             // copy from txt file to program specific file
-            File sourceFile = new File(submissionDestinationFilePath + language.getFileExtension());
+            File sourceFile = new File(submissionDir.getAbsolutePath() + "/" + submissionId + language.getFileExtension());
             copyContent(tempFile, sourceFile);
             tempFile.delete();
 
-            amazonClient.downloadDirectory(problemCode, problemTestCasesDirectory);
-
             Map<String, String> commandMap = new HashMap<>();
-            commandMap.put(RunnerConstants.SOURCE_FILE_DIRECTORY, userSubmissionsDirectory);
+            commandMap.put(RunnerConstants.SOURCE_FILE_DIRECTORY, submissionDir.getAbsolutePath());
             commandMap.put(RunnerConstants.SUBMISSION_ID, submissionId);
             commandMap.put(RunnerConstants.LANGUAGE, language.getLanguage());
             commandMap.put(RunnerConstants.FILE_EXTENSION, language.getFileExtension());
             commandMap.put(RunnerConstants.COMPILE_COMMAND, language.getCompileCommand());
             commandMap.put(RunnerConstants.RUN_COMMAND, language.getRunCommand());
+            commandMap.put(RunnerConstants.CLASS_NAME, attribute.getFileName());
 
             boolean compilationSuccess = true;
 
@@ -92,11 +102,10 @@ public class Runner extends RunnerUtils {
             AtomicBoolean accepted = new AtomicBoolean(true);
 
             for (TestCase testCase: testCases) {
-
+                // set input file path and output file path
                 commandMap.put(RunnerConstants.INPUT_FILE_PATH, problemTestCasesDirectory + testCase.getInputFileName());
 
-                // need to change user output path
-                String outputFilePath = userOutputDirectory + userName + Date.from(Instant.now()) + problemCode + testCase.getId() +
+                String outputFilePath = userOutputDirectory + submissionId + RunnerConstants.OUTPUT + testCase.getId() +
                         FileConstants.TEXT_FILE_EXT;
                 File outputFile = new File(outputFilePath);
                 try {
@@ -123,7 +132,7 @@ public class Runner extends RunnerUtils {
                 }
                 outputFile.delete();
             }
-            sourceFile.delete();
+            FileUtils.deleteDirectory(submissionDir);
             return new RunResponse(accepted.get()? "Passed": "Failed", passedCount.get(), failedCount.get());
         }
         catch (Exception e) {
