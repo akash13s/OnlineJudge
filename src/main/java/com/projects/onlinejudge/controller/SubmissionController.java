@@ -16,8 +16,8 @@ public class SubmissionController {
     @Autowired
     private SubmissionServiceImpl submissionService;
 
-    @PostMapping("/judge")
-    public ResponseEntity<?> judgeSolution(@RequestParam("language") String language,
+    @PostMapping("/create")
+    public ResponseEntity<?> createSubmission(@RequestParam("language") String language,
                                            @RequestParam("userName") String userName,
                                            @RequestParam("problemCode") String problemCode,
                                            @RequestParam("code") MultipartFile code) throws Exception {
