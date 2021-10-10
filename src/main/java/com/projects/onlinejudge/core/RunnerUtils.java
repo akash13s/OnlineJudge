@@ -1,7 +1,4 @@
-package com.projects.onlinejudge.helpers;
-
-import com.projects.onlinejudge.dto.RunRequest;
-import com.projects.onlinejudge.dto.RunResponse;
+package com.projects.onlinejudge.core;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -9,10 +6,9 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.stream.Stream;
 
-public abstract class IRunner {
-    public abstract RunResponse runTests(RunRequest attribute);
-    public String compare_one_test(String userOutput, String actualOutput ) {
+public class RunnerUtils {
 
+    public String compareOneTest(String userOutput, String actualOutput ) {
         String userText = removeSpace(userOutput);
         String actualText = removeSpace(actualOutput);
         if(userText.equals(actualText)){
@@ -21,7 +17,7 @@ public abstract class IRunner {
         else return "Failed";
         // only sample
     }
-    public String removeSpace( String file) {
+    public String removeSpace(String file) {
         StringBuilder contentBuilder = new StringBuilder();
         try (Stream<String> stream = Files.lines( Paths.get(file), StandardCharsets.UTF_8))
         {

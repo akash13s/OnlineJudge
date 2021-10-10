@@ -20,6 +20,7 @@ import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URL;
 
 @Service
 public class AmazonClient implements AwsS3Service {
@@ -138,5 +139,8 @@ public class AmazonClient implements AwsS3Service {
         return true;
     }
 
+    public String getResourceUrl(String key) {
+        return s3client.getResourceUrl(bucket, key);
+    }
 
 }
