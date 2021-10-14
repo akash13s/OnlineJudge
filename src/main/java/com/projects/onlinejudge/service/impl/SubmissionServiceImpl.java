@@ -16,6 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Instant;
+import java.util.Date;
 import java.util.Objects;
 
 @Service
@@ -53,6 +55,7 @@ public class SubmissionServiceImpl implements SubmissionService {
         submission.setProblemCode(problemCode);
         submission.setUserName(userName);
         submission.setLanguage(language);
+        submission.setCreatedAt(Date.from(Instant.now()));
         submissionRepository.save(submission);
 
         // save submission in s3
@@ -69,13 +72,21 @@ public class SubmissionServiceImpl implements SubmissionService {
         RunRequest runRequest = mapper.map(submission, RunRequest.class);
         runRequest.setFileName(getFilename(Objects.requireNonNull(code.getOriginalFilename())));
         RunResponse runResponse = runner.runTests(runRequest);
-        SubmissionResponseDTO responseDTO = new SubmissionResponseDTO();
-        responseDTO.setId(submission.getId());
-        responseDTO.setProblemCode(problemCode);
+
+        // save submission verdict
+        submission.setVerdict(runResponse.getVerdict());
+        submission.setMessage(runResponse.getMessage());
+        submission.setTestCasesCount(runResponse.getTestCasesCount());
+        submission.setPassedCount(runResponse.getPassedCount());
+        submission.setWrongAnswerCount(runResponse.getWrongAnswerCount());
+        submission.setTimeLimitExceededCount(runResponse.getTimeLimitExceededCount());
+        submissionRepository.save(submission);
+
+        // return response
+        SubmissionResponseDTO responseDTO = mapper.map(runResponse, SubmissionResponseDTO.class);
         responseDTO.setUserName(userName);
-        responseDTO.setVerdict(responseDTO.getVerdict());
-        responseDTO.setTestCasesFailed(runResponse.getFailed());
-        responseDTO.setTestCasesPassed(runResponse.getPassed());
+        responseDTO.setProblemCode(problemCode);
+
         return responseDTO;
     }
 

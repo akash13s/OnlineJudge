@@ -6,12 +6,15 @@ class Addition {
     }
 
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        int a = scanner.nextInt();
-        int b = scanner.nextInt();
-        scanner.close();
-
-        int result = new Addition().add(a,b);
-        System.out.println(result);
+//        Scanner scanner = new Scanner(System.in);
+//        int a = scanner.nextInt();
+//        int b = scanner.nextInt();
+//        scanner.close();
+//
+//        int result = new Addition().add(a,b);
+//        System.out.println(result);
+        for (int i=1; ; i++) {
+            System.out.println(i);
+        }
     }
 }

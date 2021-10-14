@@ -1,20 +1,35 @@
 package com.projects.onlinejudge.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.io.Serializable;
 
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
 public class RunResponse implements Serializable {
 
+    private long id;
     String verdict;
-    long passed;
-    long failed;
+    String message;
+    long testCasesCount;
+    long passedCount;
+    long wrongAnswerCount;
+    long timeLimitExceededCount;
+//    long memoryLimitExceededCount;
 
+
+    public RunResponse(long id, String verdict, String message, long testCasesCount,
+                       long passedCount, long wrongAnswerCount, long timeLimitExceededCount) {
+        this.id = id;
+        this.verdict = verdict;
+        this.message = message;
+        this.testCasesCount = testCasesCount;
+        this.passedCount = passedCount;
+        this.wrongAnswerCount = wrongAnswerCount;
+        this.timeLimitExceededCount = timeLimitExceededCount;
+    }
+
+    public RunResponse() {
+    }
 }

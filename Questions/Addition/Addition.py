@@ -14,3 +14,6 @@ if __name__ == '__main__':
     b = int(inp[1])
 
     print(add(a,b))
+
+#     while True:
+#         print(1)

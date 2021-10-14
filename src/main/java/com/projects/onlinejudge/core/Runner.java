@@ -3,6 +3,7 @@ package com.projects.onlinejudge.core;
 import com.projects.onlinejudge.config.LanguageConfig;
 import com.projects.onlinejudge.constants.FileConstants;
 import com.projects.onlinejudge.constants.RunnerConstants;
+import com.projects.onlinejudge.constants.SubmissionConstants;
 import com.projects.onlinejudge.domain.TestCase;
 import com.projects.onlinejudge.dto.RunRequest;
 import com.projects.onlinejudge.dto.RunResponse;
@@ -19,17 +20,17 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class Runner extends RunnerUtils {
 
-    //
     @Value("${submissions.directory}")
     private String submissionsDirectory;
 
-    // looks good
     @Value("${problem.testcases.directory}")
     private String problemTestCasesDirectory;
 
@@ -50,8 +51,9 @@ public class Runner extends RunnerUtils {
     private ProblemRepository problemRepository;
 
     public RunResponse runTests(RunRequest attribute)  {
-        AtomicLong passedCount = new AtomicLong();
-        AtomicLong failedCount = new AtomicLong();
+        AtomicLong passedCount = new AtomicLong(0);
+        AtomicLong wrongAnswerCount = new AtomicLong(0);
+        AtomicLong timeLimitExceededCount = new AtomicLong(0);
         try {
 
             String lang = attribute.getLanguage();
@@ -79,6 +81,7 @@ public class Runner extends RunnerUtils {
             copyContent(tempFile, sourceFile);
             tempFile.delete();
 
+            // create command map
             Map<String, String> commandMap = new HashMap<>();
             commandMap.put(RunnerConstants.SOURCE_FILE_DIRECTORY, submissionDir.getAbsolutePath());
             commandMap.put(RunnerConstants.SUBMISSION_ID, submissionId);
@@ -88,18 +91,23 @@ public class Runner extends RunnerUtils {
             commandMap.put(RunnerConstants.RUN_COMMAND, language.getRunCommand());
             commandMap.put(RunnerConstants.CLASS_NAME, attribute.getFileName());
 
-            boolean compilationSuccess = true;
+            List<TestCase> testCases = problemRepository.findProblemByProblemCode(problemCode).getTestCases();
+
+            AtomicBoolean compilationError = new AtomicBoolean(false);
 
             if (!language.getCompileCommand().isEmpty()) {
-                compilationSuccess = compileCode(commandMap);
+                compileCode(commandMap, compilationError);
             }
 
-            if (!compilationSuccess) {
-                return new RunResponse("Compilation Error", 0, 0);
+            if (compilationError.get()) {
+                FileUtils.deleteDirectory(submissionDir);
+                return new RunResponse(Long.parseLong(submissionId), SubmissionConstants.CE, SubmissionConstants.COMPILATION_ERROR,
+                        testCases.size(), 0, 0, 0);
             }
 
-            List<TestCase> testCases = problemRepository.findProblemByProblemCode(problemCode).getTestCases();
-            AtomicBoolean accepted = new AtomicBoolean(true);
+            if (!language.getCompileCommand().isEmpty()) {
+                System.out.println("Code compiled successfully");
+            }
 
             for (TestCase testCase: testCases) {
                 // set input file path and output file path
@@ -116,66 +124,118 @@ public class Runner extends RunnerUtils {
                 commandMap.put(RunnerConstants.OUTPUT_FILE_PATH, outputFilePath);
 
                 // run test
-                boolean runStatus = runTest(commandMap);
-                if (!runStatus) {
-                    return new RunResponse("Runtime error", passedCount.get(), failedCount.get());
+                AtomicBoolean runTimeError = new AtomicBoolean(false);
+                AtomicBoolean timeLimitExceeded = new AtomicBoolean(false);
+
+                runTest(commandMap, runTimeError, timeLimitExceeded);
+
+                if (runTimeError.get()) {
+                    outputFile.delete();
+                    FileUtils.deleteDirectory(submissionDir);
+                    return new RunResponse(Long.parseLong(submissionId), SubmissionConstants.RTE, SubmissionConstants.RUN_TIME_ERROR,
+                            testCases.size(), passedCount.get(), wrongAnswerCount.get(), timeLimitExceededCount.get());
                 }
 
-                String actualOutputFilePath = problemTestCasesDirectory + testCase.getOutputFileName();
-                String result = compareOneTest(outputFilePath, actualOutputFilePath);
-                System.out.println("Input: " + testCase.getId() + " => " + result);
-                if (result.equals("Passed")) {
-                    passedCount.getAndIncrement();
-                } else {
-                    accepted.set(false);
-                    failedCount.getAndIncrement();
+                if (timeLimitExceeded.get()) {
+                    timeLimitExceededCount.getAndIncrement();
+                }
+                else {
+                    String actualOutputFilePath = problemTestCasesDirectory + testCase.getOutputFileName();
+                    boolean result = compareOneTest(outputFilePath, actualOutputFilePath);
+                    System.out.println("Input: " + testCase.getId() + " => " + result);
+                    if (result) {
+                        passedCount.getAndIncrement();
+                    } else {
+                        wrongAnswerCount.getAndIncrement();
+                    }
                 }
                 outputFile.delete();
             }
             FileUtils.deleteDirectory(submissionDir);
-            return new RunResponse(accepted.get()? "Passed": "Failed", passedCount.get(), failedCount.get());
+            return getRunResponse(Long.parseLong(submissionId), testCases.size(), passedCount, wrongAnswerCount, timeLimitExceededCount);
         }
         catch (Exception e) {
             System.out.println("Error while evaluating code");
-            return new RunResponse("Error while evaluating", 0, 0);
+            return new RunResponse(Long.parseLong(attribute.getSubmissionId()), SubmissionConstants.SYSTEM_ERROR, SubmissionConstants.SYSTEM_ERROR,
+                    0, 0, 0, 0);
         }
     }
 
-    public boolean compileCode(Map<String, String> commandMap) {
+    private RunResponse getRunResponse(long submissionId, long totalTestCases, AtomicLong passedCount, AtomicLong wrongAnswerCount, AtomicLong timeLimitExceededCount) {
+        RunResponse runResponse = new RunResponse();
+        if (timeLimitExceededCount.get() > 0) {
+            runResponse.setVerdict(SubmissionConstants.TLE);
+            runResponse.setMessage(SubmissionConstants.TIME_LIMIT_EXCEEDED);
+        }
+        else if (passedCount.get() == totalTestCases) {
+            runResponse.setVerdict(SubmissionConstants.AC);
+            runResponse.setMessage(SubmissionConstants.ACCEPTED);
+        }
+        else {
+            runResponse.setVerdict(SubmissionConstants.WA);
+            runResponse.setMessage(SubmissionConstants.WRONG_ANSWER);
+        }
+        runResponse.setTestCasesCount(totalTestCases);
+        runResponse.setPassedCount(passedCount.get());
+        runResponse.setWrongAnswerCount(wrongAnswerCount.get());
+        runResponse.setTimeLimitExceededCount(timeLimitExceededCount.get());
+        runResponse.setId(submissionId);
+        return runResponse;
+    }
+
+
+    private void compileCode(Map<String, String> commandMap, AtomicBoolean compilationError) {
         StringSubstitutor sub = new StringSubstitutor(commandMap);
         String compileCommand = sub.replace(commandMap.get(RunnerConstants.COMPILE_COMMAND));
+        ProcessBuilder builder;
+        Process p = null;
         try {
             // Process to compile the code
-            ProcessBuilder builder = new ProcessBuilder();
+            builder = new ProcessBuilder();
             builder.command("bash", "-c", compileCommand);
-            builder.redirectErrorStream(true);
-            Process p = builder.start();
-            printResults(p);
-            System.out.println("Code Compiled Successfully");
-            return true;
+            builder.redirectErrorStream(false);
+            p = builder.start();
+            checkErrorStream(p, compilationError);
+            p.destroyForcibly();
         }
         catch (IOException e) {
             e.printStackTrace();
-            return false;
+            compilationError.set(true);
+            assert p != null;
+            p.destroyForcibly();
         }
     }
 
-    public boolean runTest(Map<String, String> commandMap){
+    private void runTest(Map<String, String> commandMap, AtomicBoolean runTimeError, AtomicBoolean timeLimitExceeded){
         StringSubstitutor sub = new StringSubstitutor(commandMap);
         String runCommand = sub.replace(commandMap.get(RunnerConstants.RUN_COMMAND));
+        ProcessBuilder builder;
+        Process process = null;
         try {
             // Process to run and execute the code
-            ProcessBuilder builder2 = new ProcessBuilder();
-            builder2.command("bash","-c", runCommand);
-            builder2.redirectErrorStream(true);
-            Process p2 = builder2.start();
-            printResults(p2);
-            return true;
+            builder = new ProcessBuilder();
+            builder.command("bash","-c", runCommand);
+            builder.redirectErrorStream(false);
+            process = builder.start();
+            timeLimitExceeded.set(!process.waitFor(1, TimeUnit.SECONDS));
+            if (!timeLimitExceeded.get()) {
+                checkErrorStream(process, runTimeError);
+            }
+            killProcess(process);
         }
-        catch (IOException e) {
+        catch (IOException | InterruptedException e) {
             e.printStackTrace();
-            return false;
+            runTimeError.set(true);
+            assert process != null;
+            killProcess(process);
         }
+    }
+
+    private void killProcess(Process process) {
+        if (Objects.nonNull(process.descendants())) {
+            process.descendants().forEach(ProcessHandle::destroyForcibly);
+        }
+        process.destroyForcibly();
     }
 
 }
