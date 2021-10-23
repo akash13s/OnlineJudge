@@ -9,12 +9,9 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class SubmissionResponseDTO {
+public class SubmissionResponseDTO extends RunResponse{
 
-    private Long id;
-    private String verdict;
-    private Long testCasesPassed;
-    private Long testCasesFailed;
+    private long id;
     private String userName;
     private String problemCode;
     

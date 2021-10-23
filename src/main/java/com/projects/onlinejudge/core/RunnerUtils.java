@@ -4,17 +4,19 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
 public class RunnerUtils {
 
-    public String compareOneTest(String userOutput, String actualOutput ) {
+    public boolean compareOneTest(String userOutput, String actualOutput ) {
         String userText = removeSpace(userOutput);
         String actualText = removeSpace(actualOutput);
         if(userText.equals(actualText)){
-            return "Passed";
+            return true;
         }
-        else return "Failed";
+        else return false;
         // only sample
     }
     public String removeSpace(String file) {
@@ -31,11 +33,21 @@ public class RunnerUtils {
     }
 
     // Printing the terminal output after code execution
-    public static void printResults(Process process) throws IOException {
+    public static void printResults(Process process, AtomicBoolean runTimeError) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
         String line = "";
         while ((line = reader.readLine()) != null) {
             System.out.println(line);
+        }
+        // check error stream
+        checkErrorStream(process, runTimeError);
+    }
+
+    public static void checkErrorStream(Process process, AtomicBoolean flag) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+        String line = "";
+        if (!(reader.readLine() == null || Objects.equals(reader.readLine(), ""))) {
+            flag.set(true);
         }
     }
 
