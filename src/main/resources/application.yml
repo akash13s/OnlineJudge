@@ -26,3 +26,22 @@ language-config:
       fileExtension: .py
       compileCommand:
       runCommand: cd ${sourceFileDirectory} && python3 ${submissionId}.py < ${inputFilePath} > ${outputFilePath}
+
+#Rate Limiter Configs
+resilience4j.ratelimiter:
+  instances:
+    orderService:
+      limitForPeriod: 5
+      limitRefreshPeriod: 4s
+      timeoutDuration: 0
+      registerHealthIndicator: true
+      eventConsumerBufferSize: 100
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  endpoint:
+    health:
+      show-details: always
