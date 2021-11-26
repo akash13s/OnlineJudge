@@ -24,6 +24,6 @@ public class ContestDTO {
     private String rules;
     private String scoring;
 
-    private List<Problem> problems = new ArrayList<>();
+    private List<Problem> problems;
 
 }

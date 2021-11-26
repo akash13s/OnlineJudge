@@ -30,4 +30,7 @@ public class Contest {
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER, mappedBy = "contest", orphanRemoval = true)
     private List<Problem> problems = new ArrayList<>();
 
+    @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "contests")
+    private List<User> participants = new ArrayList<>();
+
 }
