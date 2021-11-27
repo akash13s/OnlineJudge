@@ -7,16 +7,20 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 
 
 @RestController
 @RequestMapping("/api/submissions")
 public class SubmissionController {
 
+    private static final String ORDER_SERVICE ="orderService" ;
+
     @Autowired
     private SubmissionServiceImpl submissionService;
 
     @PostMapping("/create")
+    @RateLimiter(name=ORDER_SERVICE, fallbackMethod = "rateLimiterFallback")
     public ResponseEntity<?> createSubmission(@RequestParam("language") String language,
                                            @RequestParam("userName") String userName,
                                            @RequestParam("problemCode") String problemCode,
@@ -27,8 +31,14 @@ public class SubmissionController {
     }
 
     @PostMapping("/download/{problemCode}")
+    @RateLimiter(name=ORDER_SERVICE, fallbackMethod = "rateLimiterFallback")
     public ResponseEntity<?> downloadProblem(@PathVariable("problemCode") String problemCode) {
         boolean success = submissionService.downloadProblem(problemCode);
         return new ResponseEntity<>(success? "problem successfully downloaded": "unable to download problem", HttpStatus.OK);
     }
+
+    public ResponseEntity<String> rateLimiterFallback(Exception e) {
+        return new ResponseEntity<String>("Submission Controller does not permit further calls", HttpStatus.TOO_MANY_REQUESTS);
+    }
+
 }
