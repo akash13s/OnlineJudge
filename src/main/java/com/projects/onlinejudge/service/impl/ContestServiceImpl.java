@@ -12,6 +12,8 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -65,8 +67,13 @@ public class ContestServiceImpl implements ContestService {
     }
 
     @Override
-    public void deleteContest(Long id) {
-        contestRepository.deleteById(id);
+    public boolean deleteContest(Long id) {
+        Contest contest = validateContest(id);
+        if (Objects.isNull(contest)) {
+            return false;
+        }
+        contestRepository.delete(contest);
+        return true;
     }
 
     @Override
@@ -76,6 +83,14 @@ public class ContestServiceImpl implements ContestService {
         if (Objects.isNull(contest) || Objects.isNull(problem)) {
             return false;
         }
+        // check if we are not adding the same problem again to the contest
+        List<String> contestProblemNames = new ArrayList<>();
+        contest.getProblems().forEach(contestProblem -> contestProblemNames.add(contestProblem.getProblemCode()));
+
+        if (contestProblemNames.contains(problemCode)) {
+            return false;
+        }
+
         problem.setContest(contest);
         problemRepository.save(problem);
         return true;
@@ -96,22 +111,49 @@ public class ContestServiceImpl implements ContestService {
     }
 
     @Override
-    public void registerForContest(Long contestId, String userName) {
+    public boolean registerParticipantForContest(String userName, Long contestId) {
+        User user = validateUser(userName);
         Contest contest = validateContest(contestId);
-        User user = userRepository.findUserByUserName(userName);
-        if (contest!=null && user!=null) {
+        if (user!=null && contest!=null) {
+            // check if the same user has not been registered multiple  times
+            List<String> participants = getContestParticipants(contestId);
+            if (participants.contains(userName)) {
+                return false;
+            }
+
+            user.getContests().add(contest);
+            userRepository.save(user);
             contest.getParticipants().add(user);
+            contestRepository.save(contest);
+            return true;
         }
+        return false;
     }
 
     @Override
-    public void unregisterForContest(Long contestId, String userName) {
+    public boolean unregisterParticipantFromContest(String userName, Long contestId) {
+        User user = validateUser(userName);
         Contest contest = validateContest(contestId);
-        User user = userRepository.findUserByUserName(userName);
-        if (contest!=null && user!=null) {
+        if (user!=null && contest!=null) {
+            user.getContests().remove(contest);
+            userRepository.save(user);
             contest.getParticipants().remove(user);
+            contestRepository.save(contest);
+            return true;
         }
+        return false;
     }
+
+    @Override
+    public List<String> getContestParticipants(Long contestId) {
+        List<String> participants = new ArrayList<>();
+        Contest contest = validateContest(contestId);
+        if (Objects.nonNull(contest)) {
+            contest.getParticipants().forEach(user -> participants.add(user.getUserName()));
+        }
+        return participants;
+    }
+
 
     private Contest validateContest(Long contestId) {
         Optional<Contest> contest = contestRepository.findById(contestId);
@@ -125,4 +167,13 @@ public class ContestServiceImpl implements ContestService {
         }
         return null;
     }
+
+    private User validateUser(String userName) {
+        User user = userRepository.findUserByUserName(userName);
+        if (Objects.nonNull(user)) {
+            return user;
+        }
+        return null;
+    }
+
 }
