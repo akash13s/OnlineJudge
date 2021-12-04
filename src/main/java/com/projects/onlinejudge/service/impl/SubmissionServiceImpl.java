@@ -3,10 +3,12 @@ package com.projects.onlinejudge.service.impl;
 import com.projects.onlinejudge.config.LanguageConfig;
 import com.projects.onlinejudge.constants.FileConstants;
 import com.projects.onlinejudge.core.Runner;
+import com.projects.onlinejudge.domain.Contest;
 import com.projects.onlinejudge.domain.Submission;
 import com.projects.onlinejudge.dto.RunRequest;
 import com.projects.onlinejudge.dto.RunResponse;
 import com.projects.onlinejudge.dto.SubmissionResponseDTO;
+import com.projects.onlinejudge.repository.ContestRepository;
 import com.projects.onlinejudge.repository.ProblemRepository;
 import com.projects.onlinejudge.repository.SubmissionRepository;
 import com.projects.onlinejudge.repository.UserRepository;
@@ -16,9 +18,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.validation.constraints.Null;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Objects;
+import java.util.Optional;
 
 @Service
 public class SubmissionServiceImpl implements SubmissionService {
@@ -44,18 +48,22 @@ public class SubmissionServiceImpl implements SubmissionService {
     @Autowired
     private ModelMapper mapper;
 
+    @Autowired
+    private ContestRepository contestRepository;
+
     @Override
     public SubmissionResponseDTO submitCode(String language, String userName,
-                                            String problemCode, MultipartFile code) {
+                                            String problemCode, MultipartFile code, Long contestId) {
 
         // validate language, username, problemCode
-        validateSubmissionFields(language, userName, problemCode, code);
+        validateSubmissionFields(language, userName, problemCode, code, contestId);
 
         Submission submission = new Submission();
         submission.setProblemCode(problemCode);
         submission.setUserName(userName);
         submission.setLanguage(language);
         submission.setCreatedAt(Date.from(Instant.now()));
+        submission.setContestId(contestId);
         submissionRepository.save(submission);
 
         // save submission in s3
@@ -68,7 +76,7 @@ public class SubmissionServiceImpl implements SubmissionService {
 
         /*
             We are calling runner directly here. Later on, we need to call kafka producer from here.
-         */
+        */
         RunRequest runRequest = mapper.map(submission, RunRequest.class);
         runRequest.setFileName(getFilename(Objects.requireNonNull(code.getOriginalFilename())));
         RunResponse runResponse = runner.runTests(runRequest);
@@ -112,7 +120,7 @@ public class SubmissionServiceImpl implements SubmissionService {
     }
 
     private void validateSubmissionFields(String language, String userName,
-                                          String problemCode, MultipartFile code) {
+                                          String problemCode, MultipartFile code, Long contestId) {
 
         if (!languageConfig.getLanguageMap().containsKey(language)) {
             // raise LanguageNotSupportedException
@@ -122,6 +130,23 @@ public class SubmissionServiceImpl implements SubmissionService {
         }
         if (problemRepository.findProblemByProblemCode(problemCode) == null) {
             // raise ProblemCodeDoesNotExistException
+        }
+        if (contestId != null) {
+            Optional<Contest> optionalContest = contestRepository.findById(contestId);
+            if(!optionalContest.isPresent()) {
+                // raise ContestDoesNotExistException
+            }
+            else {
+                Contest contest = optionalContest.get();
+                Date currentDate = Date.from(Instant.now());
+                if(currentDate.before(contest.getStartDate())) {
+                    // raise SubmissionBeforeContestTime
+                }
+                if(currentDate.after((contest.getEndDate()))){
+                    // raise SubmissionAfterContestTime
+                }
+            }
+
         }
         // we can add checks related to code as well later on
     }

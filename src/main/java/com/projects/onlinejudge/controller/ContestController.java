@@ -91,4 +91,9 @@ public class ContestController {
         return new ResponseEntity<>(participants, HttpStatus.OK);
     }
 
+//    @GetMapping("/{contestId}/rankings")
+//    public  ResponseEntity<List<RankListDTO>> getRankList(@PathVariable("contestId") Long contestId) {
+//        List<RankListDTO> ranklist = contestService.getContestRanklist(contestId);
+//    }
+
 }

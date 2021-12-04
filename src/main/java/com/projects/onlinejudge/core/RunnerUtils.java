@@ -43,11 +43,11 @@ public class RunnerUtils {
         checkErrorStream(process, runTimeError);
     }
 
-    public static void checkErrorStream(Process process, AtomicBoolean flag) throws IOException {
+    public static void checkErrorStream(Process process, AtomicBoolean runTimeError) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
         String line = "";
         if (!(reader.readLine() == null || Objects.equals(reader.readLine(), ""))) {
-            flag.set(true);
+            runTimeError.set(true);
         }
     }
 

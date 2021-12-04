@@ -33,4 +33,5 @@ public class Submission {
     private long wrongAnswerCount;
     private long timeLimitExceededCount;
     private Date createdAt;
+    private long contestId;
 }
