@@ -25,9 +25,7 @@ public class SubmissionController {
                                            @RequestParam("userName") String userName,
                                            @RequestParam("problemCode") String problemCode,
                                            @RequestParam("code") MultipartFile code) throws Exception {
-        // Setting contestId as 0 to prevent NullPointException
-        // Note: we could not use this as contest id for any contest
-        SubmissionResponseDTO responseDTO = submissionService.submitCode(language, userName, problemCode, code, 0L);
+        SubmissionResponseDTO responseDTO = submissionService.submitCode(language, userName, problemCode, code, null);
         return new ResponseEntity<SubmissionResponseDTO>(responseDTO, HttpStatus.OK);
     }
 
