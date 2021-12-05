@@ -43,7 +43,8 @@ public class ProblemServiceImpl implements ProblemService {
     @Override
     public ProblemDTO createProblem(ProblemDTO problemDTO) {
         User user = validateUser(problemDTO.getUserName());
-        Problem existingProblem = problemRepository.findProblemByProblemCode(problemDTO.getProblemCode());
+        String problemCode = problemDTO.getProblemCode();
+        Problem existingProblem = problemRepository.findProblemByProblemCode(problemCode);
         if (Objects.nonNull(existingProblem)) {
             // raise ProblemCodeAlreadyExistsException
         }

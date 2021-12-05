@@ -12,10 +12,11 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RunRequest implements Serializable {
-    String language;
-    String awsSubmissionKey;
-    String userName;
-    String submissionId;
-    String problemCode;
-    String fileName;
+    private String language;
+    private String awsSubmissionKey;
+    private String userName;
+    private String submissionId;
+    private String problemCode;
+    private String fileName;
+    private long contestId;
 }

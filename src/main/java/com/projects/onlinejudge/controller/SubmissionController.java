@@ -25,8 +25,20 @@ public class SubmissionController {
                                            @RequestParam("userName") String userName,
                                            @RequestParam("problemCode") String problemCode,
                                            @RequestParam("code") MultipartFile code) throws Exception {
+        SubmissionResponseDTO responseDTO = submissionService.submitCode(language, userName, problemCode, code, null);
+        return new ResponseEntity<SubmissionResponseDTO>(responseDTO, HttpStatus.OK);
+    }
 
-        SubmissionResponseDTO responseDTO = submissionService.submitCode(language, userName, problemCode, code);
+    @PostMapping("/create-contest-submission")
+    @RateLimiter(name=ORDER_SERVICE, fallbackMethod = "rateLimiterFallback")
+    public ResponseEntity<?> createContestSubmission(@RequestParam("language") String language,
+                                              @RequestParam("userName") String userName,
+                                              @RequestParam("problemCode") String problemCode,
+                                              @RequestParam("code") MultipartFile code,
+                                              @RequestParam("contestId") Long contestId) throws Exception {
+
+        SubmissionResponseDTO responseDTO = submissionService.submitCode(language, userName, problemCode, code,
+                contestId);
         return new ResponseEntity<SubmissionResponseDTO>(responseDTO, HttpStatus.OK);
     }
 
