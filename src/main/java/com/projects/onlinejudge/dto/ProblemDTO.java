@@ -36,6 +36,6 @@ public class ProblemDTO {
     @NotBlank(message = "constraints cannot be blank")
     private String constraints;
 
-    private List<TestCaseDTO> testCases;
+    private List<SampleTestCaseDTO> testCases;
 
 }
