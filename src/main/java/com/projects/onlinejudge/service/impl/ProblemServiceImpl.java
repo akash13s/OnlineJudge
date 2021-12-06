@@ -153,7 +153,7 @@ public class ProblemServiceImpl implements ProblemService {
     private Boolean deleteAllTestCases(String problemCode) {
         Problem problem = validateProblemCode(problemCode);
         // delete all test cases from s3 and entries from db
-        boolean success = amazonClient.deleteDirectory(problemCode);
+        boolean success = amazonClient.deleteDirectory(FileConstants.PROBLEMS + "/" + problemCode);
         if (!success) {
             return false;
         }
@@ -164,7 +164,8 @@ public class ProblemServiceImpl implements ProblemService {
 
     private String getFileName(String problemCode, boolean isInputFile, long testCaseNumber,
                                boolean isSampleTest) {
-        String fileName = problemCode;
+        String fileName = FileConstants.PROBLEMS + "/";
+        fileName += problemCode;
         if (isSampleTest) {
             fileName += FileConstants.SAMPLE_TEST;
         }
