@@ -110,13 +110,13 @@ public class SubmissionServiceImpl implements SubmissionService {
 
     @Override
     public Boolean downloadProblem(String problemCode) {
-        amazonClient.downloadDirectory(problemCode, runner.getProblemTestCasesDirectory());
+        amazonClient.downloadDirectory(FileConstants.PROBLEMS + "/" + problemCode, runner.getProblemTestCasesDirectory());
         return true;
     }
 
 
     private String getSubmissionKey(String userName, Long id) {
-        return userName + "/" + id + FileConstants.TEXT_FILE_EXT;
+        return FileConstants.SUBMISSIONS + "/" + userName + "/" + id + FileConstants.TEXT_FILE_EXT;
     }
 
     private void validateSubmissionFields(String language, String userName,
