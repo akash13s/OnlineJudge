@@ -70,7 +70,7 @@ public class ProblemController {
     }
 
     @DeleteMapping("/remove/testcase")
-    public ResponseEntity<?> removeTestCase(@RequestBody TestCaseDTO testCaseDTO) {
+    public ResponseEntity<?> removeTestCase(@RequestBody TestCaseDTO testCaseDTO) throws IOException {
         boolean success = problemService.deleteTestCase(testCaseDTO.getProblemCode(), (int) testCaseDTO.getId(),
                 testCaseDTO.isSampleTest());
         return getResponse(success, "Test case removed successfully", "Failed to remove test case");

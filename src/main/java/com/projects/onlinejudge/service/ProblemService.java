@@ -13,5 +13,5 @@ public interface ProblemService {
     public ProblemDTO updateProblem(ProblemDTO problemDTO);
     public Boolean deleteProblem(String problemCode);
     public TestCaseDTO addTestCase(String problemCode, MultipartFile inputFile, MultipartFile outputFile, boolean isSampleTest) throws IOException;
-    public Boolean deleteTestCase(String problemCode, int testCaseId, boolean isSampleTest);
+    public Boolean deleteTestCase(String problemCode, int testCaseId, boolean isSampleTest) throws IOException;
 }
