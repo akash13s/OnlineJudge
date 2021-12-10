@@ -4,6 +4,7 @@ import com.projects.onlinejudge.config.LanguageConfig;
 import com.projects.onlinejudge.constants.FileConstants;
 import com.projects.onlinejudge.constants.RunnerConstants;
 import com.projects.onlinejudge.constants.SubmissionConstants;
+import com.projects.onlinejudge.domain.Problem;
 import com.projects.onlinejudge.domain.TestCase;
 import com.projects.onlinejudge.dto.RunRequest;
 import com.projects.onlinejudge.dto.RunResponse;
@@ -17,10 +18,10 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -60,6 +61,31 @@ public class Runner extends RunnerUtils {
             String userName = attribute.getUserName();
             String submissionId = attribute.getSubmissionId();
             String problemCode = attribute.getProblemCode();
+
+            /*
+            - For judging submission, check if problem test case directory is already present in the local file system.
+                - If yes
+                    - Check if the lastModified time for local problem test case directory>= lastModified time for s3 problem test case directory
+                        - If yes, go ahead and use it
+                        - Otherwise, download the new problem directory and overwrite the older version in LFS
+                - Otherwise download the test case directory on the local file system.
+             */
+            Problem problem = problemRepository.findProblemByProblemCode(problemCode);
+            String problemTestCaseDirectory = problemTestCasesDirectory + FileConstants.PROBLEMS + "/" + problemCode;
+
+            if (Files.exists(Path.of(problemTestCaseDirectory))) {
+                Date testCaseLastUpdatedAt = problem.getTestCaseLastUpdatedAt();
+                File dir = new File(problemTestCaseDirectory);
+                long localProblemTestCaseDirectoryLastUpdatedAt = getLastModifiedDateForProblemTestCaseFolder(problemTestCaseDirectory);
+                if (testCaseLastUpdatedAt.after(Date.from(Instant.ofEpochMilli(localProblemTestCaseDirectoryLastUpdatedAt)))) {
+                    // download updated test case directory from s3
+                    FileUtils.deleteDirectory(dir);
+                    amazonClient.downloadDirectory(FileConstants.PROBLEMS + "/" + problem.getProblemCode(), problemTestCasesDirectory);
+                }
+            }
+            else {
+                amazonClient.downloadDirectory(FileConstants.PROBLEMS + "/" + problem.getProblemCode(), problemTestCasesDirectory);
+            }
 
             LanguageConfig.Language language = languageConfig.getLanguageMap().get(lang);
 
@@ -236,6 +262,12 @@ public class Runner extends RunnerUtils {
             process.descendants().forEach(ProcessHandle::destroyForcibly);
         }
         process.destroyForcibly();
+    }
+
+    private long getLastModifiedDateForProblemTestCaseFolder(String problemTestCaseDirectory) {
+        File hiddenTestCases = new File(problemTestCaseDirectory + FileConstants.HIDDEN_TEST);
+        File sampleTestCases = new File(problemTestCaseDirectory + FileConstants.SAMPLE_TEST);
+        return Math.max(hiddenTestCases.lastModified(), sampleTestCases.lastModified());
     }
 
 }

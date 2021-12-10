@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class ProblemServiceImpl implements ProblemService {
@@ -85,7 +86,7 @@ public class ProblemServiceImpl implements ProblemService {
     }
 
     @Override
-    public Boolean deleteProblem(String problemCode) {
+    public Boolean deleteProblem(String problemCode) throws IOException {
         if (!deleteAllTestCases(problemCode)) {
             return false;
         }
@@ -95,7 +96,7 @@ public class ProblemServiceImpl implements ProblemService {
 
     @Override
     public TestCaseDTO addTestCase(String problemCode, MultipartFile inputFile, MultipartFile outputFile,
-                                   boolean isSampleTest) throws IOException {
+                                   boolean isSampleTest) throws IOException, InterruptedException {
 
         // add problem related logic
         Problem problem = validateProblemCode(problemCode);
@@ -117,7 +118,7 @@ public class ProblemServiceImpl implements ProblemService {
         if (Files.exists(Path.of(problemTestCaseDirectory))) {
             Date testCaseLastUpdatedAt = problem.getTestCaseLastUpdatedAt();
             File dir = new File(problemTestCaseDirectory);
-            long localProblemTestCaseDirectoryLastUpdatedAt = dir.lastModified();
+            long localProblemTestCaseDirectoryLastUpdatedAt = getLastModifiedDateForProblemTestCaseFolder(problemTestCaseDirectory);
             if (testCaseLastUpdatedAt.after(Date.from(Instant.ofEpochMilli(localProblemTestCaseDirectoryLastUpdatedAt)))) {
                 // upload to s3 and add entry in db - this sequence needs to be maintained
                 testCase1 = addTestCaseToS3AndDB(problem, inputFileKey, outputFileKey, isSampleTest, inputFile, outputFile);
@@ -161,7 +162,7 @@ public class ProblemServiceImpl implements ProblemService {
     }
 
     @Override
-    public Boolean deleteTestCase(String problemCode, int testCaseId, boolean isSampleTest) throws IOException {
+    public Boolean deleteTestCase(String problemCode, int testCaseId, boolean isSampleTest) throws IOException, InterruptedException {
         // add problem related logic
         Problem problem = validateProblemCode(problemCode);
         String inputFileKey = getFileName(problemCode, true, testCaseId, isSampleTest);
@@ -182,7 +183,7 @@ public class ProblemServiceImpl implements ProblemService {
         if (Files.exists(Path.of(problemTestCaseDirectory))) {
             Date testCaseLastUpdatedAt = problem.getTestCaseLastUpdatedAt();
             File dir = new File(problemTestCaseDirectory);
-            long localProblemTestCaseDirectoryLastUpdatedAt = dir.lastModified();
+            long localProblemTestCaseDirectoryLastUpdatedAt = getLastModifiedDateForProblemTestCaseFolder(problemTestCaseDirectory);
             if (testCaseLastUpdatedAt.after(Date.from(Instant.ofEpochMilli(localProblemTestCaseDirectoryLastUpdatedAt)))) {
                 // delete from s3, db and download the new test case directory
                 success = removeTestCaseFromS3AndDB(problem, testCaseId, inputFileKey, outputFileKey);
@@ -213,7 +214,7 @@ public class ProblemServiceImpl implements ProblemService {
         return success;
     }
 
-    private Boolean deleteAllTestCases(String problemCode) {
+    private Boolean deleteAllTestCases(String problemCode) throws IOException {
         Problem problem = validateProblemCode(problemCode);
         // delete all test cases from s3 and entries from db
         boolean success = amazonClient.deleteDirectory(FileConstants.PROBLEMS + "/" + problemCode);
@@ -221,6 +222,15 @@ public class ProblemServiceImpl implements ProblemService {
             return false;
         }
         testCaseRepository.deleteAll(problem.getTestCases());
+
+        // delete problem test case directory if it exists in LFS
+        String problemTestCaseDirectory = runner.getProblemTestCasesDirectory() + FileConstants.PROBLEMS + "/" + problemCode;
+
+        if (Files.exists(Path.of(problemTestCaseDirectory))) {
+            File dir = new File(problemTestCaseDirectory);
+            FileUtils.deleteDirectory(dir);
+        }
+
         return true;
     }
 
@@ -261,7 +271,7 @@ public class ProblemServiceImpl implements ProblemService {
     }
 
     private TestCase addTestCaseToDB(Problem problem, String inputFileKey, String outputFileKey, boolean isSampleTest,
-                             MultipartFile inputFile, MultipartFile outputFile) throws IOException {
+                             MultipartFile inputFile, MultipartFile outputFile) throws IOException, InterruptedException {
         TestCase testCase = new TestCase();
         testCase.setId(problem.getNextTestCaseId());
         testCase.setProblemCode(problem.getProblemCode());
@@ -277,17 +287,18 @@ public class ProblemServiceImpl implements ProblemService {
         testCase.setProblem(problem);
         TestCase testCase1 = testCaseRepository.save(testCase);
 
+        problem.setTestCaseLastUpdatedAt(Date.from(Instant.now()));
         problem.setNextTestCaseId(problem.getNextTestCaseId() + 1);
         problem.setNumberOfTestCases(problem.getNumberOfTestCases() + 1);
         problem.setUpdatedAt(Date.from(Instant.now()));
-        problem.setTestCaseLastUpdatedAt(Date.from(Instant.now()));
         problemRepository.save(problem);
+        TimeUnit.SECONDS.sleep(1);
 
         return testCase1;
     }
 
     private TestCase addTestCaseToS3AndDB(Problem problem, String inputFileKey, String outputFileKey, boolean isSampleTest,
-                                          MultipartFile inputFile, MultipartFile outputFile) throws IOException {
+                                          MultipartFile inputFile, MultipartFile outputFile) throws IOException, InterruptedException {
         boolean success = uploadTestCaseToS3(inputFileKey, inputFile, outputFileKey, outputFile);
         if (!success) {
             return null;
@@ -299,23 +310,30 @@ public class ProblemServiceImpl implements ProblemService {
         return amazonClient.deleteFile(inputFileKey) && amazonClient.deleteFile(outputFileKey);
     }
 
-    private void removeTestCaseFromDB(Problem problem, long testCaseId) {
+    private void removeTestCaseFromDB(Problem problem, long testCaseId) throws InterruptedException {
         TestCase testCase = testCaseRepository.findByProblemAndId(problem, testCaseId);
         testCaseRepository.delete(testCase);
 
+        problem.setTestCaseLastUpdatedAt(Date.from(Instant.now()));
         problem.setNumberOfTestCases(problem.getNumberOfTestCases() - 1);
         problem.setUpdatedAt(Date.from(Instant.now()));
-        problem.setTestCaseLastUpdatedAt(Date.from(Instant.now()));
         problemRepository.save(problem);
+        TimeUnit.SECONDS.sleep(1);
     }
 
-    private boolean removeTestCaseFromS3AndDB(Problem problem, long testCaseId, String inputFileKey, String outputFileKey) {
+    private boolean removeTestCaseFromS3AndDB(Problem problem, long testCaseId, String inputFileKey, String outputFileKey) throws InterruptedException {
         boolean success = removeTestCaseFromS3(inputFileKey, outputFileKey);
         if (!success) {
             return false;
         }
         removeTestCaseFromDB(problem, testCaseId);
         return true;
+    }
+
+    private long getLastModifiedDateForProblemTestCaseFolder(String problemTestCaseDirectory) {
+        File hiddenTestCases = new File(problemTestCaseDirectory + FileConstants.HIDDEN_TEST);
+        File sampleTestCases = new File(problemTestCaseDirectory + FileConstants.SAMPLE_TEST);
+        return Math.max(hiddenTestCases.lastModified(), sampleTestCases.lastModified());
     }
 
 }
