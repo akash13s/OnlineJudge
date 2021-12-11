@@ -39,6 +39,8 @@ public class Problem {
     private Date createdAt;
     private Date updatedAt;
 
+    private Date testCaseLastUpdatedAt;
+
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "problem", orphanRemoval = true)
     private List<TestCase> testCases = new ArrayList<>();
 

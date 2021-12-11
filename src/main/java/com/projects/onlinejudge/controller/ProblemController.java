@@ -49,7 +49,7 @@ public class ProblemController {
     }
 
     @DeleteMapping("/remove/{problemCode}")
-    public ResponseEntity<?> removeProblem(@PathVariable("problemCode") String problemCode) {
+    public ResponseEntity<?> removeProblem(@PathVariable("problemCode") String problemCode) throws IOException {
         boolean success = problemService.deleteProblem(problemCode);
         return getResponse(success, "Problem removed successfully", "Unable to remove problem");
     }
@@ -58,7 +58,7 @@ public class ProblemController {
     public ResponseEntity<?> addProblemTestCase(@PathVariable("problemCode") String problemCode,
                                                 @RequestParam("inputFile") MultipartFile inputFile,
                                                 @RequestParam("outputFile") MultipartFile outputFile,
-                                                @RequestParam("isSampleTest") Boolean isSampleTest) throws IOException {
+                                                @RequestParam("isSampleTest") Boolean isSampleTest) throws IOException, InterruptedException {
 
         TestCaseDTO testCaseDTO = problemService.addTestCase(problemCode, inputFile, outputFile, isSampleTest);
         if (Objects.nonNull(testCaseDTO)) {
@@ -70,7 +70,7 @@ public class ProblemController {
     }
 
     @DeleteMapping("/remove/testcase")
-    public ResponseEntity<?> removeTestCase(@RequestBody TestCaseDTO testCaseDTO) {
+    public ResponseEntity<?> removeTestCase(@RequestBody TestCaseDTO testCaseDTO) throws IOException, InterruptedException {
         boolean success = problemService.deleteTestCase(testCaseDTO.getProblemCode(), (int) testCaseDTO.getId(),
                 testCaseDTO.isSampleTest());
         return getResponse(success, "Test case removed successfully", "Failed to remove test case");
